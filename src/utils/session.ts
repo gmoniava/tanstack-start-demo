@@ -5,7 +5,6 @@ type SessionData = { userId?: string }
 
 export function useAppSession() {
   const password = process.env.SESSION_SECRET
-  console.log(password)
   if (
     !password ||
     password.length < 32 ||

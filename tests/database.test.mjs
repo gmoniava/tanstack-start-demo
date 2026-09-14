@@ -21,10 +21,27 @@ test(
       connectionString: process.env.TEST_DATABASE_URL,
     })
     await admin.connect()
-    const pool = new pg.Pool({
+    const connections = new pg.Pool({
       connectionString: process.env.TEST_DATABASE_URL,
-      options: `-c search_path=${schema}`,
     })
+    // Transaction-local settings work with hosted transaction poolers too.
+    const pool = {
+      async query(sql, values) {
+        const client = await connections.connect()
+        try {
+          await client.query('BEGIN')
+          await client.query(`SET LOCAL search_path TO "${schema}"`)
+          const result = await client.query(sql, values)
+          await client.query('COMMIT')
+          return result
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        } finally {
+          client.release()
+        }
+      },
+    }
     globalThis.appDatabase = pool
     try {
       await admin.query(`CREATE SCHEMA "${schema}"`)
@@ -71,7 +88,7 @@ test(
       assert.equal(await findUserById(user.id), null)
       assert.equal(await findUserByEmail(user.email), null)
     } finally {
-      await pool.end()
+      await connections.end()
       delete globalThis.appDatabase
       await admin.query(`DROP SCHEMA "${schema}" CASCADE`)
       await admin.end()
