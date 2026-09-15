@@ -1,7 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import type { LinkProps } from '@tanstack/react-router';
-import './Sidebar.css';
 
 const iconPaths = {
   dashboard: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
@@ -28,19 +27,19 @@ export type SidebarItem =
 
 export const mockMenuItems: ReadonlyArray<SidebarItem> = [
   { id: 'dashboard', label: 'Home', icon: 'dashboard', to: '/dashboard' },
-  // {
-  //   id: 'account',
-  //   label: 'Account',
-  //   children: [
-  //     { id: 'login', label: 'Log in', icon: 'login', to: '/login' },
-  //     {
-  //       id: 'register',
-  //       label: 'Create account',
-  //       icon: 'register',
-  //       to: '/register',
-  //     },
-  //   ],
-  // },
+  {
+    id: 'account',
+    label: 'Account',
+    children: [
+      { id: 'login', label: 'Log in', icon: 'login', to: '/login' },
+      {
+        id: 'register',
+        label: 'Create account',
+        icon: 'register',
+        to: '/register',
+      },
+    ],
+  },
 ];
 
 type SidebarProps = {
@@ -81,11 +80,16 @@ export function Sidebar({
         title={compact ? item.label : undefined}
         aria-label={item.label}
         activeOptions={{ exact: true }}
-        activeProps={{ className: 'sidebar-link-active' }}
-        className="sidebar-link"
+        activeProps={{ className: 'bg-neutral-800 text-white' }}
+        className={`
+          flex min-h-11 items-center gap-3 rounded-md p-3 text-sm
+          hover:bg-neutral-800 hover:text-white
+          focus-visible:outline-2 focus-visible:-outline-offset-2
+          focus-visible:outline-white
+        `}
       >
         <svg
-          className="sidebar-icon"
+          className="size-6 shrink-0"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -96,14 +100,16 @@ export function Sidebar({
         >
           <path d={iconPaths[item.icon]} />
         </svg>
-        <span className="sidebar-label">{item.label}</span>
+        <span className={compact ? 'hidden' : 'whitespace-nowrap'}>
+          {item.label}
+        </span>
       </Link>
     );
   }
 
   const menu = (
     <>
-      <div className="sidebar-heading">
+      <div className="mb-4 flex h-12 items-center gap-2 font-semibold">
         <button
           type="button"
           onClick={isMobile ? onClose : onToggle}
@@ -116,10 +122,15 @@ export function Sidebar({
           }
           aria-expanded={open}
           aria-controls="sidebar-navigation"
-          className="sidebar-toggle"
+          className={`
+            flex min-h-11 shrink-0 cursor-pointer items-center rounded-md p-3
+            hover:bg-neutral-800 hover:text-white
+            focus-visible:outline-2 focus-visible:-outline-offset-2
+            focus-visible:outline-white
+          `}
         >
           <svg
-            className="sidebar-icon"
+            className="size-6 shrink-0"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -139,18 +150,33 @@ export function Sidebar({
             />
           </svg>
         </button>
-        <h2 id="sidebar-title" className="sidebar-label">
+        <h2
+          id="sidebar-title"
+          className={compact ? 'hidden' : 'whitespace-nowrap'}
+        >
           Menu
         </h2>
       </div>
       <nav id="sidebar-navigation" aria-label="Main navigation">
-        <ul className="sidebar-items">
+        <ul className="flex list-none flex-col gap-1">
           {items.map((item) => (
             <li key={item.id}>
               {item.children ? (
                 <>
-                  <p className="sidebar-group-label">{item.label}</p>
-                  <ul className="sidebar-children" aria-label={item.label}>
+                  <p
+                    className={
+                      compact ? 'hidden' : 'p-3 text-xs text-neutral-400'
+                    }
+                  >
+                    {item.label}
+                  </p>
+                  <ul
+                    className={`
+                      flex list-none flex-col gap-1 border-neutral-700
+                      ${compact ? 'mt-1 border-t pt-1' : 'ml-3 border-l pl-2'}
+                    `}
+                    aria-label={item.label}
+                  >
                     {item.children.map((child) => (
                       <li key={child.id}>{renderLink(child)}</li>
                     ))}
@@ -171,7 +197,13 @@ export function Sidebar({
       <aside
         id="app-sidebar"
         aria-label="Sidebar"
-        className={`app-sidebar sidebar-desktop${compact ? ' sidebar-collapsed' : ''}`}
+        className={`
+          hidden h-dvh shrink-0 overflow-x-hidden overflow-y-auto md:block
+          bg-neutral-950 p-2 text-neutral-200
+          transition-[width] duration-250 ease-[ease]
+          motion-reduce:transition-none
+          ${compact ? 'w-16' : 'w-60'}
+        `}
       >
         {menu}
       </aside>
@@ -183,7 +215,20 @@ export function Sidebar({
       ref={dialogRef}
       id="app-sidebar"
       aria-labelledby="sidebar-title"
-      className="app-sidebar sidebar-dialog"
+      className={`
+        fixed inset-y-0 right-auto left-0 m-0
+        h-dvh max-h-none w-[min(280px,85vw)] max-w-none
+        overflow-x-hidden overflow-y-auto
+        border-0 bg-neutral-950 p-2 text-neutral-200
+        -translate-x-full open:translate-x-0
+        transition-[translate,display,overlay]
+        transition-discrete duration-250 ease-[ease]
+        backdrop:bg-black/50 backdrop:opacity-0 open:backdrop:opacity-100
+        backdrop:transition-[opacity,display,overlay]
+        backdrop:transition-discrete backdrop:duration-250 backdrop:ease-[ease]
+        motion-reduce:transition-none motion-reduce:backdrop:transition-none
+        starting:open:-translate-x-full starting:open:backdrop:opacity-0
+      `}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
