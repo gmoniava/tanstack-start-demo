@@ -1,10 +1,10 @@
-import { useSession } from '@tanstack/react-start/server'
-import { findUserById } from './users.server'
+import { useSession } from '@tanstack/react-start/server';
+import { findUserById } from './users.server';
 
-type SessionData = { userId?: string }
+type SessionData = { userId?: string };
 
 export function useAppSession() {
-  const password = process.env.SESSION_SECRET
+  const password = process.env.SESSION_SECRET;
   if (
     !password ||
     password.length < 32 ||
@@ -12,7 +12,7 @@ export function useAppSession() {
   ) {
     throw new Error(
       'Set SESSION_SECRET to a random secret of at least 32 characters',
-    )
+    );
   }
   return useSession<SessionData>({
     name: 'app-session',
@@ -25,12 +25,12 @@ export function useAppSession() {
       path: '/',
       maxAge: 7 * 24 * 60 * 60,
     },
-  })
+  });
 }
 
 export async function getSessionUser() {
-  const session = await useAppSession()
-  if (!session.data.userId) return null
+  const session = await useAppSession();
+  if (!session.data.userId) return null;
 
   // Older sessions may still contain IDs from
   // the previous in-memory user store.
@@ -40,10 +40,10 @@ export async function getSessionUser() {
   if (
     !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(session.data.userId)
   ) {
-    await session.clear()
-    return null
+    await session.clear();
+    return null;
   }
-  const user = await findUserById(session.data.userId)
-  if (!user) await session.clear()
-  return user
+  const user = await findUserById(session.data.userId);
+  if (!user) await session.clear();
+  return user;
 }

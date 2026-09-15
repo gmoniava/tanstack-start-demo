@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 export const loginSchema = z.object({
   email: z
@@ -8,7 +8,7 @@ export const loginSchema = z.object({
     .email('Enter a valid email address.')
     .max(254),
   password: z.string().min(1, 'Enter your password.').max(128),
-})
+});
 
 export const registrationSchema = loginSchema.extend({
   name: z.string().trim().min(1, 'Enter your name.').max(100),
@@ -16,4 +16,4 @@ export const registrationSchema = loginSchema.extend({
     .string()
     .min(8, 'Use at least 8 characters for your password.')
     .max(128),
-})
+});
