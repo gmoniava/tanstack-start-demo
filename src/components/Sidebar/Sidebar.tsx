@@ -17,12 +17,13 @@ type MenuLink = {
   to: LinkProps['to'];
   children?: never;
 };
+// Each item is a link or a group. A group's children can include more groups.
 export type SidebarItem =
   | MenuLink
   | {
       id: string;
       label: string;
-      children: ReadonlyArray<MenuLink>;
+      children: ReadonlyArray<SidebarItem>;
     };
 
 export const mockMenuItems: ReadonlyArray<SidebarItem> = [
@@ -42,6 +43,16 @@ export const mockMenuItems: ReadonlyArray<SidebarItem> = [
   },
 ];
 
+// Desktop and mobile use the same colors, spacing, and scroll behavior.
+const panelClasses = `
+  h-dvh overflow-x-hidden overflow-y-auto bg-neutral-950 p-2 text-neutral-200
+`;
+const actionClasses = `
+  flex items-center gap-3 rounded-md p-3
+  hover:bg-neutral-800 hover:text-white
+  focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white
+`;
+
 type SidebarProps = {
   isMobile: boolean;
   open: boolean;
@@ -57,56 +68,79 @@ export function Sidebar({
   onToggle,
   items = mockMenuItems,
 }: SidebarProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const compact = !isMobile && !open;
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!isMobile || !open || !dialog) return;
-    dialog.showModal();
+    if (!isMobile || !open) return;
+    // Remember which element had keyboard focus, usually the "Open menu" button.
+    // Also save the body's scroll setting so we can put both back on close.
+    const previousFocus = document.activeElement;
     const previousOverflow = document.body.style.overflow;
+
+    // Prevent the body from scrolling behind the menu. Focus the sidebar so
+    // pressing Tab moves through its controls and Escape can close it.
     document.body.style.overflow = 'hidden';
+    panelRef.current?.focus();
     return () => {
-      dialog.close();
+      // When the menu closes, restore scrolling and focus the previous element.
+      // React also runs this when switching to desktop or leaving this layout.
       document.body.style.overflow = previousOverflow;
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
   }, [isMobile, open]);
 
-  function renderLink(item: MenuLink) {
+  // For a group, call this function again for each child until we reach links.
+  // In the narrow desktop sidebar, show only icons. aria-label names each link
+  // for screen readers; title shows its name when the pointer hovers over it.
+  function renderItem(item: SidebarItem) {
     return (
-      <Link
-        to={item.to}
-        onClick={isMobile ? onClose : undefined}
-        title={compact ? item.label : undefined}
-        aria-label={item.label}
-        activeOptions={{ exact: true }}
-        activeProps={{ className: 'bg-neutral-800 text-white' }}
-        className={`
-          flex min-h-11 items-center gap-3 rounded-md p-3 text-sm
-          hover:bg-neutral-800 hover:text-white
-          focus-visible:outline-2 focus-visible:-outline-offset-2
-          focus-visible:outline-white
-        `}
-      >
-        <svg
-          className="size-6 shrink-0"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d={iconPaths[item.icon]} />
-        </svg>
-        <span className={compact ? 'hidden' : 'whitespace-nowrap'}>
-          {item.label}
-        </span>
-      </Link>
+      <li key={item.id}>
+        {item.children ? (
+          <>
+            {!compact && (
+              <p className="p-3 text-xs text-neutral-400">{item.label}</p>
+            )}
+            <ul
+              aria-label={item.label}
+              className={`
+              space-y-1 border-neutral-700
+              ${compact ? 'mt-1 border-t pt-1' : 'ml-3 border-l pl-2'}
+            `}
+            >
+              {item.children.map(renderItem)}
+            </ul>
+          </>
+        ) : (
+          <Link
+            to={item.to}
+            aria-label={item.label}
+            title={compact ? item.label : undefined}
+            onClick={isMobile ? onClose : undefined}
+            activeOptions={{ exact: true }}
+            activeProps={{ className: 'bg-neutral-800 text-white' }}
+            className={`${actionClasses} text-sm whitespace-nowrap`}
+          >
+            <svg
+              className="size-6 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d={iconPaths[item.icon]} />
+            </svg>
+            {!compact && item.label}
+          </Link>
+        )}
+      </li>
     );
   }
 
+  // Build the menu once, then place it in the desktop sidebar or mobile overlay.
   const menu = (
     <>
       <div className="mb-4 flex h-12 items-center gap-2 font-semibold">
@@ -122,130 +156,87 @@ export function Sidebar({
           }
           aria-expanded={open}
           aria-controls="sidebar-navigation"
-          className={`
-            flex min-h-11 shrink-0 cursor-pointer items-center rounded-md p-3
-            hover:bg-neutral-800 hover:text-white
-            focus-visible:outline-2 focus-visible:-outline-offset-2
-            focus-visible:outline-white
-          `}
+          className={`${actionClasses} shrink-0 cursor-pointer`}
         >
-          <svg
-            className="size-6 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          <span
             aria-hidden="true"
+            className="size-6 text-center text-2xl leading-6"
           >
-            <path
-              d={
-                isMobile
-                  ? 'm6 6 12 12 M6 18 18 6'
-                  : compact
-                    ? 'm9 5 7 7-7 7'
-                    : 'm15 5-7 7 7 7'
-              }
-            />
-          </svg>
+            {isMobile ? '×' : compact ? '›' : '‹'}
+          </span>
         </button>
         <h2
           id="sidebar-title"
-          className={compact ? 'hidden' : 'whitespace-nowrap'}
+          className={compact ? 'sr-only' : 'whitespace-nowrap'}
         >
           Menu
         </h2>
       </div>
       <nav id="sidebar-navigation" aria-label="Main navigation">
-        <ul className="flex list-none flex-col gap-1">
-          {items.map((item) => (
-            <li key={item.id}>
-              {item.children ? (
-                <>
-                  <p
-                    className={
-                      compact ? 'hidden' : 'p-3 text-xs text-neutral-400'
-                    }
-                  >
-                    {item.label}
-                  </p>
-                  <ul
-                    className={`
-                      flex list-none flex-col gap-1 border-neutral-700
-                      ${compact ? 'mt-1 border-t pt-1' : 'ml-3 border-l pl-2'}
-                    `}
-                    aria-label={item.label}
-                  >
-                    {item.children.map((child) => (
-                      <li key={child.id}>{renderLink(child)}</li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                renderLink(item)
-              )}
-            </li>
-          ))}
-        </ul>
+        <ul className="space-y-1">{items.map(renderItem)}</ul>
       </nav>
     </>
   );
 
   if (!isMobile) {
+    // On desktop, closing shrinks the sidebar to 64px so its icons stay visible.
+    // Opening widens it to 240px. The page beside it gets the remaining space.
     return (
       <aside
         id="app-sidebar"
         aria-label="Sidebar"
         className={`
-          hidden h-dvh shrink-0 overflow-x-hidden overflow-y-auto md:block
-          bg-neutral-950 p-2 text-neutral-200
-          transition-[width] duration-250 ease-[ease]
-          motion-reduce:transition-none
-          ${compact ? 'w-16' : 'w-60'}
-        `}
+        ${panelClasses} hidden shrink-0 md:block
+        transition-[width] duration-250 ease-[ease] motion-reduce:transition-none
+        ${compact ? 'w-16' : 'w-60'}
+      `}
       >
         {menu}
       </aside>
     );
   }
 
+  // On mobile, closing slides the sidebar off the left edge of the screen.
+  // Leave it in the HTML so CSS can finish that movement; removing it with
+  // {open && ...} would make it vanish immediately. While closed, inert stops
+  // users from tabbing to its hidden links, and clicks pass through to the page.
   return (
-    <dialog
-      ref={dialogRef}
-      id="app-sidebar"
-      aria-labelledby="sidebar-title"
-      className={`
-        fixed inset-y-0 right-auto left-0 m-0
-        h-dvh max-h-none w-[min(280px,85vw)] max-w-none
-        overflow-x-hidden overflow-y-auto
-        border-0 bg-neutral-950 p-2 text-neutral-200
-        -translate-x-full open:translate-x-0
-        transition-[translate,display,overlay]
-        transition-discrete duration-250 ease-[ease]
-        backdrop:bg-black/50 backdrop:opacity-0 open:backdrop:opacity-100
-        backdrop:transition-[opacity,display,overlay]
-        backdrop:transition-discrete backdrop:duration-250 backdrop:ease-[ease]
-        motion-reduce:transition-none motion-reduce:backdrop:transition-none
-        starting:open:-translate-x-full starting:open:backdrop:opacity-0
-      `}
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onPointerDown={(event) => {
-        if (event.target !== event.currentTarget) return;
-        const bounds = event.currentTarget.getBoundingClientRect();
-        if (
-          event.clientX < bounds.left ||
-          event.clientX > bounds.right ||
-          event.clientY < bounds.top ||
-          event.clientY > bounds.bottom
-        )
-          onClose();
+    <div
+      inert={!open}
+      aria-hidden={!open}
+      className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onClose();
       }}
     >
-      {menu}
-    </dialog>
+      {/* This button is the dark background behind the sidebar. Clicking it
+          closes the menu. It fades out when closed and no longer blocks clicks. */}
+      <button
+        type="button"
+        aria-label="Close menu"
+        onClick={onClose}
+        className={`
+          absolute inset-0 bg-black/50 transition-opacity duration-250
+          motion-reduce:transition-none ${open ? 'opacity-100' : 'opacity-0'}
+        `}
+      />
+      {/* translate-x-0 shows the sidebar; -translate-x-full moves it fully off-screen.
+          Skip the animation if the user has requested reduced motion.
+          tabIndex={-1} lets focus() select this div without adding a Tab stop. */}
+      <div
+        ref={panelRef}
+        id="app-sidebar"
+        role="region"
+        aria-labelledby="sidebar-title"
+        tabIndex={-1}
+        className={`
+          ${panelClasses} relative w-[min(280px,85vw)]
+          transition-transform duration-250 ease-[ease] motion-reduce:transition-none
+          ${open ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        {menu}
+      </div>
+    </div>
   );
 }
