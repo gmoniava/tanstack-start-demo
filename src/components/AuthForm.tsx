@@ -36,7 +36,9 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
         return
       }
       await router.invalidate()
-      await navigate({ to: '/' })
+      // After login, replace the form's history entry with the dashboard so
+      // Back skips the login form. Registration keeps its existing history behavior.
+      await navigate({ to: registering ? '/' : '/dashboard', replace: !registering })
     } catch {
       setError('Unable to complete your request. Please try again shortly.')
     } finally {
