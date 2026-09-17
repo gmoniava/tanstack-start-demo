@@ -1,9 +1,20 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router';
+import { Outlet, createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useMediaQuery } from 'usehooks-ts';
 import { Sidebar } from '../../components/Sidebar/Sidebar';
+import { getCurrentUserFn } from '../../serverActions/authActions';
 
-export const Route = createFileRoute('/_app')({ component: AppLayout });
+export const Route = createFileRoute('/_app')({
+  beforeLoad: async () => {
+    // Check the session before loading any page inside _app. Keeping this here
+    // protects the dashboard and future child pages without repeating the check.
+    if (!(await getCurrentUserFn())) {
+      // Replace this history entry so Back does not return to the blocked page.
+      throw redirect({ to: '/login', replace: true });
+    }
+  },
+  component: AppLayout,
+});
 
 function AppLayout() {
   // true: expanded on desktop, visible on mobile.

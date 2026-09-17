@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import type { LinkProps } from '@tanstack/react-router';
+import { LogoutButton } from './LogoutButton';
 
 const iconPaths = {
   dashboard: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
@@ -45,7 +46,7 @@ export const mockMenuItems: ReadonlyArray<SidebarItem> = [
 
 // Desktop and mobile use the same colors, spacing, and scroll behavior.
 const panelClasses = `
-  h-dvh overflow-x-hidden overflow-y-auto bg-neutral-950 p-2 text-neutral-200
+  h-dvh flex-col overflow-hidden bg-neutral-950 p-2 text-neutral-200
 `;
 const actionClasses = `
   flex items-center gap-3 rounded-md p-3
@@ -143,7 +144,7 @@ export function Sidebar({
   // Build the menu once, then place it in the desktop sidebar or mobile overlay.
   const menu = (
     <>
-      <div className="mb-4 flex h-12 items-center gap-2 font-semibold">
+      <div className="mb-4 flex h-12 shrink-0 items-center gap-2 font-semibold">
         <button
           type="button"
           onClick={isMobile ? onClose : onToggle}
@@ -172,9 +173,17 @@ export function Sidebar({
           Menu
         </h2>
       </div>
-      <nav id="sidebar-navigation" aria-label="Main navigation">
+      {/* Only the menu scrolls, so logout stays visible at the bottom. */}
+      <nav
+        id="sidebar-navigation"
+        aria-label="Main navigation"
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
+      >
         <ul className="space-y-1">{items.map(renderItem)}</ul>
       </nav>
+      <div className="mt-2 shrink-0 border-t border-neutral-700 pt-2">
+        <LogoutButton compact={compact} className={actionClasses} />
+      </div>
     </>
   );
 
@@ -186,7 +195,7 @@ export function Sidebar({
         id="app-sidebar"
         aria-label="Sidebar"
         className={`
-        ${panelClasses} hidden shrink-0 md:block
+        ${panelClasses} hidden shrink-0 md:flex
         transition-[width] duration-250 ease-[ease] motion-reduce:transition-none
         ${compact ? 'w-16' : 'w-60'}
       `}
@@ -230,7 +239,7 @@ export function Sidebar({
         aria-labelledby="sidebar-title"
         tabIndex={-1}
         className={`
-          ${panelClasses} relative w-[min(280px,85vw)]
+          ${panelClasses} relative flex w-[min(280px,85vw)]
           transition-transform duration-250 ease-[ease] motion-reduce:transition-none
           ${open ? 'translate-x-0' : '-translate-x-full'}
         `}
