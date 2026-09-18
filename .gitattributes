@@ -1,0 +1,2 @@
+# Match the line endings written by the TanStack route generator.
+src/routeTree.gen.ts text eol=lf
